@@ -17,10 +17,10 @@ double result_derivative
 ```
 
 ## Problem 2-3
-# functions:
+### functions:
 1)fibonacci_iterative(int i)
 2)fibonacci_recursive(int i)
 
 ## Problem 2-4
-# Functions:
+### Functions:
 1)str2double(har str[])
