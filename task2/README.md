@@ -22,5 +22,5 @@ double result_derivative
 2)fibonacci_recursive(int i)
 
 ## Problem 2-4
-#Functions:
+# Functions:
 1)str2double(har str[])
