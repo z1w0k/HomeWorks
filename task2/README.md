@@ -23,4 +23,4 @@ double result_derivative
 
 ## Problem 2-4
 ### Functions:
-1)str2double(har str[])
+1)str2double(char str[])
