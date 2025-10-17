@@ -141,28 +141,20 @@ void parseStringToWords(const char* str, struct Node** head) {
 }
 
 int main() {
-    char input[1000];
-    
-    printf("Enter string: ");
-    if (fgets(input, sizeof(input), stdin) == NULL) {
-        printf("Error reading input\n");
-        return 1;
-    }
-
-    size_t len = strlen(input);
-    if (len > 0 && input[len - 1] == '\n') {
-        input[len - 1] = '\0';
-    }
-
+    char word[100];
     struct Node* wordList = NULL;
-    parseStringToWords(input, &wordList);
 
+    // Читаем слова до EOF (Ctrl+D)
+    while (scanf("%99s", word) != EOF) {
+        appendNode(&wordList, word);
+    }
 
-    removeMatchingWords(&wordList);
+    // Обрабатываем и выводим результат
+    if (wordList != NULL) {
+        removeMatchingWords(&wordList);
+        printList(wordList);
+        freeList(wordList);
+    }
 
-    printf("Result: ");
-    printList(wordList);
-
-    freeList(wordList);
     return 0;
 }
