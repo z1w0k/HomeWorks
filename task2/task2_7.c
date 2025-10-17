@@ -51,15 +51,16 @@ int expr()
 {
     int e = add();
 
-    while (curlex == '-') {
-        getlex();
-        e -= add();
-    }
+    while ((curlex == '-') || (curlex == '+')) {
+        if (curlex == '-') {
+            getlex();
+            e -= add();
+        }
 
-    while (curlex == '+')
-    {
-        getlex();
-        e += add();
+        if (curlex == '+') {
+            getlex();
+            e += add();
+        }
     }
     return e;
 }
@@ -68,20 +69,21 @@ int add()
 {
     int a = power();
 
-    while (curlex == '/') {
-        getlex();
-        int b = power();
+    while ((curlex == '/') || (curlex == '*')) {
+        if (curlex == '/') {
+            getlex();
+            int b = power();
         
-        if (b == 0) {
-            error();
-        } else{
-            a /= b;
+            if (b == 0) {
+                error();
+            } else{
+                a /= b;
+            }
         }
-    }
-    while (curlex == '*')
-    {
-        getlex();
-        a *= power();
+        if (curlex == '*') {
+            getlex();
+            a *= power();
+        }
     }
     return a;
 }
