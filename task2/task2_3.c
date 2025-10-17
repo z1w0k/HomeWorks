@@ -1,7 +1,7 @@
 #include<stdio.h>
 #include<time.h>
 
-long long fibonacci_iterative(int i) {
+unsigned long long fibonacci_iterative(int i) {
 	if (i == 0) 
 		return 0;
 	
@@ -24,7 +24,7 @@ long long fibonacci_iterative(int i) {
 }
 
 
-long long fibonacci_recursive(int i) {
+unsigned long long fibonacci_recursive(int i) {
 	if (i == 0) return 0;
 	if (i == 1) return 1;
 	

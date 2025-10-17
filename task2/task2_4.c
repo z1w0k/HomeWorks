@@ -7,7 +7,8 @@ double str2double( char str[]) {
 	int now_fraction = 0;	
 	int now_exp = 0;
 	int exp_sign = 1;
-		
+    int result1 = 0;
+
 	double exp_value = 0.0;
 	double fraction = 0.0;
 	double multiplier_frac = 10.0;
@@ -43,7 +44,6 @@ double str2double( char str[]) {
 			continue;
 		}
 		
-		
 		if(str[i] >= '0' && str[i] <= '9') {
 			int digit = str[i] - '0';
 		
@@ -54,12 +54,13 @@ double str2double( char str[]) {
 				multiplier_frac *= 10.0;
 			} else {
 				result = result * 10 + digit;
+                result1 = result1 * 10 + digit;
 			}
 
 		}
 		i++;
 	}
-
+        
 	result += fraction;
 
 	if (exp_value > 0) {
@@ -71,8 +72,16 @@ double str2double( char str[]) {
 			}
 		}
 		result *= multiplier;
+        result1 *= multiplier;
 	}
 
+    if (now_fraction == 0) {
+        if (result1 % 2 == 0) {
+            printf("1\n");
+        } else{
+            printf("0\n");
+        }
+    }
 	return (sign * result);
 }
 

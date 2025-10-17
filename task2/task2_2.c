@@ -1,17 +1,14 @@
 #include<stdio.h>
 
-
-
 int main() {
 	double x, coeff, result;
     double result_polynomial = 0.0; 
     double result_derivative = 0.0;
+    
+    printf("Введите x: ");
+    scanf("%lf", &x);
 
-	if(scanf("%lf", &x) != 1) {
-		return 1;
-    }
-
-
+    printf("Вводите коээфиценты: ");
 	while (scanf("%lf", &coeff) != EOF) {
         result_derivative = result_derivative * x + result_polynomial;   
 		result_polynomial = result_polynomial * x + coeff;
