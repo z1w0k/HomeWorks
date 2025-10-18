@@ -102,7 +102,7 @@ int main() {
   int elem;
   
   
-  while (scanf(" %c", &command) == 1) {
+  while (scanf(" %c", &command) != EOF) {
     if (command == '+' || command == '-' || command == '?') {
       if (scanf("%d", &elem) == 1) {
         switch (command) {
