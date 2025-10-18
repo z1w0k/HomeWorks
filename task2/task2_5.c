@@ -61,7 +61,6 @@ void removeMatchingWords(struct Node** head) {
     struct Node* prev = NULL;
     struct Node* lastNode = NULL;
 
-    // Находим последний узел
     struct Node* temp = *head;
     while (temp->next != NULL) {
         temp = temp->next;
@@ -91,13 +90,15 @@ void removeMatchingWords(struct Node** head) {
 
 void printList(struct Node* head) {
     struct Node* current = head;
+    printf("[");
     while (current != NULL) {
         printf("%s", current->data);
         if (current->next != NULL) {
-            printf(" ");
+            printf(", ");
         }
         current = current->next;
     }
+    printf("]");
     printf("\n");
 }
 
@@ -111,45 +112,15 @@ void freeList(struct Node* head) {
     }
 }
 
-void parseStringToWords(const char* str, struct Node** head) {
-    const char* p = str;
-
-    while (*p != '\0') {
-        while (*p != '\0' && isspace(*p)) {
-            p++;
-        }
-
-        if (*p == '\0') break;
-
-        const char* wordStart = p;
-        while (*p != '\0' && !isspace(*p)) {
-            p++;
-        }
-
-        int wordLen = p - wordStart;
-        char* word = malloc(wordLen + 1);
-        if (word == NULL) {
-            printf("Not enough memory for word\n");
-            return;
-        }
-        strncpy(word, wordStart, wordLen);
-        word[wordLen] = '\0';
-
-        appendNode(head, word);
-        free(word);
-    }
-}
 
 int main() {
     char word[100];
     struct Node* wordList = NULL;
 
-    // Читаем слова до EOF (Ctrl+D)
     while (scanf("%99s", word) != EOF) {
         appendNode(&wordList, word);
     }
 
-    // Обрабатываем и выводим результат
     if (wordList != NULL) {
         removeMatchingWords(&wordList);
         printList(wordList);

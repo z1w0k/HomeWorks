@@ -101,7 +101,6 @@ int main() {
   char command;
   int elem;
   
-  printf("Enter commands (e.g., +5 -3 ?7). Press Ctrl+D to finish:\n");
   
   while (scanf(" %c", &command) == 1) {
     if (command == '+' || command == '-' || command == '?') {
