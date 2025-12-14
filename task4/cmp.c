@@ -20,6 +20,7 @@ int main(int argc, char **argv) {
     int lineN = 1;
     int charN = 1;
 
+
     while (((str1 = read(fd1, &ch1, 1)) > 0) && ((str2 = read(fd2, &ch2,1)) > 0)) {
         if (ch1 == '\n') {
             charN = 1;
@@ -41,8 +42,8 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-        if (s1.st_size < s2.st_size) {
-            printf("%s differs from %s: flines have different sizes\n");
+        if (s1.st_size < s2.st_size || s2.st_size < s1.st_size) {
+            printf("%s differs from %s: files have different sizes\n");
             close(fd1);
             close(fd2);
             return 0;

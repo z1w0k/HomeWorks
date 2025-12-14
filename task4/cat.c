@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
             if (isN) {
                 if (isNext) {
                     isNext = 0;
-                    printf("\n%6d ", count);
+                    printf("\n%6.d ", count);
                 }
 
                 if (ch == '\n') {

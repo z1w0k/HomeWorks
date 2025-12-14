@@ -1,0 +1,15 @@
+.rwxr-xr-x  16k z1w0k  6 дек 11:47 cat
+.rw-r--r-- 1,1k z1w0k  6 дек 11:05 cat.c
+.rwxr-xr-x  16k z1w0k  6 дек 11:47 cmp
+.rw-r--r-- 1,2k z1w0k  4 дек 15:40 cmp.c
+.rwxr-xr-x  16k z1w0k  6 дек 11:47 echo
+.rw-r--r--  469 z1w0k 29 ноя 00:58 echo.c
+.rw-r--r--    0 z1w0k  6 дек 11:53 log.txt
+.rwxr-xr-x  22k z1w0k  6 дек 11:50 ls
+.rw-r--r-- 3,8k z1w0k  6 дек 11:50 ls.c
+.rw-r--r--  249 z1w0k  6 дек 11:53 Makefile
+.rwxr-xr-x  15k z1w0k  6 дек 11:47 mv
+.rw-r--r--  386 z1w0k 22 ноя 09:14 mv.c
+.rwxr-xr-x  16k z1w0k  6 дек 11:47 pwd
+.rw-r--r--  463 z1w0k 29 ноя 12:04 pwd.c
+drwxr-xr-x    - z1w0k 13 ноя 00:14 test_dir2

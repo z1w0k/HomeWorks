@@ -16,7 +16,7 @@ cat: cat.c
 	gcc -o cat cat.c
 
 ls: ls.c
-	gcc -o ls ls.c
+	gcc -o ls ls.c -g 
 
 clean:
 	rm -f echo pwd mv cmp cat ls
