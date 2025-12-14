@@ -27,6 +27,7 @@ static int isSpace(ListStr *list, int newSize) {
     return 0;
 }
 
+
 void initList(ListStr *list) {
     list->data = NULL;
     list->size = 0;
@@ -118,4 +119,61 @@ void sortList(ListStr *list) {
     }
 
     list->data[list->size] = NULL;
+}
+
+int allWords(ListStr *list) {
+    if (!list || !list->data) {
+        return 0;  
+    }
+    
+    int count = 0;
+    for (int i = 0; i < list->size; i++) {
+        char *temp = list->data[i];
+        
+        if (strcmp(temp, "|") != 0 && strcmp(temp, "||") != 0 &&
+            strcmp(temp, "&") != 0 && strcmp(temp, "&&") != 0 &&
+            strcmp(temp, ";") != 0 && strcmp(temp, ">") != 0 &&
+            strcmp(temp, ">>") != 0 && strcmp(temp, "<") != 0 &&
+            strcmp(temp, "(") != 0 && strcmp(temp, ")") != 0) {
+            count += strlen(temp);
+        }
+    }
+    return count;
+}
+
+void TheRarestNotSpecial(ListStr *list) {
+    int charCount[256] = {0};
+
+    for (int i = 0; i < list->size; ++i) {
+        char *temp = list->data[i];
+        
+        if (strcmp(temp, "|") == 0 || strcmp(temp, "||") == 0 ||
+            strcmp(temp, "&") == 0 || strcmp(temp, "&&") == 0 ||
+            strcmp(temp, ";") == 0 || strcmp(temp, ">") == 0 ||
+            strcmp(temp, ">>") == 0 || strcmp(temp, "<") == 0 ||
+            strcmp(temp, "(") == 0 || strcmp(temp, ")") == 0) {
+            continue;
+        }
+
+        for (int j = 0; temp[j] != '\0'; ++j) {
+            int ch = temp[j];
+
+            charCount[ch]++;
+        }
+    }
+
+    char rarestChar = 0;
+    int minCount = 1000;
+
+    for (int i = 0; i < 256; ++i) {
+        if (charCount[i] > 0) {
+            if (charCount[i] < minCount) {
+                minCount = charCount[i];
+                rarestChar = i;
+            }
+        }
+    }
+
+    
+    printf("The rarest character: %c \n\n", rarestChar);
 }

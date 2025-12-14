@@ -26,15 +26,15 @@ int addSym(int ch);
 int addWordFromBuf(ListStr *list);
 int isSimpleChar(int ch);
 
-static vertex start(ListStr *list);
-static vertex word(ListStr *list);
-static vertex greater(ListStr *list);
-static vertex greater2(ListStr *list);
-static vertex ampersand(ListStr *list);
-static vertex ampersand2(ListStr *list);
-static vertex pipe(ListStr *list);
-static vertex pipe2(ListStr *list);
-static vertex newline(ListStr *list);
+vertex start(ListStr *list);
+vertex word(ListStr *list);
+vertex greater(ListStr *list);
+vertex greater2(ListStr *list);
+vertex ampersand(ListStr *list);
+vertex ampersand2(ListStr *list);
+vertex pipe(ListStr *list);
+vertex pipe2(ListStr *list);
+vertex newline(ListStr *list);
 
 int main(void) {
     ListStr list;
@@ -144,7 +144,7 @@ int isSimpleChar(int ch) {
             ch == '$' || ch == '_' || ch == '/' || ch == '.');
 }
 
-static vertex start(ListStr *list) {
+vertex start(ListStr *list) {
     while (currentChar == ' ' || currentChar == '\t') {
         currentChar = getSym();
     }
@@ -157,9 +157,14 @@ static vertex start(ListStr *list) {
         }
         if (list->size > 0) {
             finishList(list);
+            printf("Initial list: \n");
             printList(list);
+            printf("\n");
             sortList(list);
+            printf("Sorted list: \n");
             printList(list);
+            printf("\nWords with out specials: %d\n\n", allWords(list));
+            TheRarestNotSpecial(list);
             clearList(list);
         }
         return Stop;
@@ -215,7 +220,7 @@ static vertex start(ListStr *list) {
     return Start;
 }
 
-static vertex word(ListStr *list) {
+vertex word(ListStr *list) {
     if (currentChar == EOF || currentChar == '\n' ||
         currentChar == ' ' || currentChar == '\t' ||
         currentChar == '|' || currentChar == '&' ||
@@ -244,7 +249,7 @@ static vertex word(ListStr *list) {
     return Word;
 }
 
-static vertex greater(ListStr *list) {
+vertex greater(ListStr *list) {
     if (currentChar == '>') {
         if (addSym(currentChar) != 0) {
             clearList(list);
@@ -260,7 +265,7 @@ static vertex greater(ListStr *list) {
     return Start;
 }
 
-static vertex greater2(ListStr *list) {
+vertex greater2(ListStr *list) {
     if (addWordFromBuf(list) != 0) {
         clearList(list);
         return Stop;
@@ -268,7 +273,7 @@ static vertex greater2(ListStr *list) {
     return Start;
 }
 
-static vertex ampersand(ListStr *list) {
+vertex ampersand(ListStr *list) {
     if (currentChar == '&') {
         if (addSym(currentChar) != 0) {
             clearList(list);
@@ -284,7 +289,7 @@ static vertex ampersand(ListStr *list) {
     return Start;
 }
 
-static vertex ampersand2(ListStr *list) {
+vertex ampersand2(ListStr *list) {
     if (addWordFromBuf(list) != 0) {
         clearList(list);
         return Stop;
@@ -292,7 +297,7 @@ static vertex ampersand2(ListStr *list) {
     return Start;
 }
 
-static vertex pipe(ListStr *list) {
+vertex pipe(ListStr *list) {
     if (currentChar == '|') {
         if (addSym(currentChar) != 0) {
             clearList(list);
@@ -308,7 +313,7 @@ static vertex pipe(ListStr *list) {
     return Start;
 }
 
-static vertex pipe2(ListStr *list) {
+vertex pipe2(ListStr *list) {
     if (addWordFromBuf(list) != 0) {
         clearList(list);
         return Stop;
@@ -316,7 +321,7 @@ static vertex pipe2(ListStr *list) {
     return Start;
 }
 
-static vertex newline(ListStr *list) {
+vertex newline(ListStr *list) {
     if (bufPos > 0) {
         if (addWordFromBuf(list) != 0) {
             clearList(list);
@@ -325,9 +330,14 @@ static vertex newline(ListStr *list) {
     }
     if (list->size > 0) {
         finishList(list);
+        printf("Initial list: \n");
         printList(list);
+        printf("\n");
         sortList(list);
+        printf("Sorted list: \n");
         printList(list);
+        printf("\nWords with out specials: %d\n\n", allWords(list));
+        TheRarestNotSpecial(list);
         clearList(list);
     }
     nullBuf();

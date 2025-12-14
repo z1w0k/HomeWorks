@@ -15,5 +15,6 @@ int addWord(ListStr *list, char *word);
 void finishList(ListStr *list);
 void printList(const ListStr *list);
 void sortList(ListStr *list);
-
+int allWords(ListStr *list);
+void TheRarestNotSpecial(ListStr *list);
 #endif
