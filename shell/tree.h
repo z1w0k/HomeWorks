@@ -1,22 +1,28 @@
-#ifndef TREE_H
-#define TREE_H
+#ifndef __TREE_H__
+#define __TREE_H__
+
 #include "list.h"
+#include <stdbool.h>
+
+typedef struct command_node {
+    char *cmd;
+    int argc;
+    char **argv;
+    char *input_file;
+    char *output_file;
+    bool append;
+    bool background;
+    int type; 
+    struct command_node *next;
+    struct command_node *conv;
+} CommandNode;
 
 typedef struct tree {
-    int argc;	
-    char **argv;
-    char *infile;
-    char *outfile;
-    int append;	
-    int backgrnd;
-    int tnext;	
-    struct tree *pipe;	
-    struct tree *next;
-} tree;
+    CommandNode *root;
+} Tree;
 
-void error(char *);
-void clear_tree(tree **);
-tree *create_tree (List);
-void print_tree (tree *, int);
+Tree* create_tree(List lst);
+void clear_tree(Tree **tr);
+void print_tree(CommandNode *node);
 
 #endif

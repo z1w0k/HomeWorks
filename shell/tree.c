@@ -1,242 +1,232 @@
 #include "tree.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
-void error(char *str) {
-    fprintf(stderr, "\n%s%s%s\n\n", "\033[1;31m", str, "\033[0m"); 
+static CommandNode* new_command(char *cmd) {
+    CommandNode *c = calloc(1, sizeof(CommandNode));
+    c->cmd = strdup(cmd);
+    c->argc = 1;
+    c->argv = calloc(2, sizeof(char*));
+    c->argv[0] = strdup(cmd);
+    return c;
 }
 
-void clear_argv(char **argv) { 
-    if (argv == NULL)
-        return;
-    for (int i = 0; argv[i] != NULL; i++)
-        free(argv[i]);
-    free(argv);
-    argv = NULL;
+static void add_arg(CommandNode *c, char *arg) {
+    c->argc++;
+    c->argv = realloc(c->argv, (c->argc + 1) * sizeof(char*));
+    c->argv[c->argc - 1] = strdup(arg);
+    c->argv[c->argc] = NULL;
 }
 
-void add_arg(List lst, tree *cur_tree) { 
-    char **term = NULL;
-    int size_term = 0;
-    char *lex = *lst;
-    while (lex != NULL && symset(*lex)) {
-        if (term == NULL) {
-            term = malloc(2*sizeof(char*));
-            *term = NULL;
-        } else 
-            term = realloc(term, (size_term + 2)*sizeof(char*));
-        size_term++;
-        term[size_term - 1] = malloc((strlen(lex) + 1)*sizeof(char));
-        term[size_term] = NULL;
-        strcpy(term[size_term - 1], lex);
-        lst++;
-        lex = *lst;
+void print_tree(CommandNode *node) {
+    if (!node) return;
+
+    printf("argc = %d\n", node->argc);
+    for (int i = 0; i < node->argc; i++) {
+        printf("argv[%d] = %s\n", i, node->argv[i]);
     }
-    cur_tree->argc = size_term;
-    cur_tree->argv = term;
-}
+    printf("input from = %s\n", node->input_file ? node->input_file : "no");
+    printf("output to = %s\n", node->output_file ? node->output_file : "no");
 
-void clear_tree(tree **root) {
-    tree *t_tree = *root;
-    if (t_tree == NULL)
-        return;
-    clear_argv(t_tree->argv);
-    clear_tree(&t_tree->pipe);
-    clear_tree(&t_tree->next);
-    free(t_tree);
-    *root = NULL;
-}
-
-tree *null_tree() {   
-    tree *cur = malloc(sizeof(tree));
-    cur->argc = 0;
-    cur->argv = NULL;
-    cur->infile = NULL;
-    cur->outfile = NULL;
-    cur->append = 0;
-    cur->backgrnd = 0;
-    cur->tnext = 0;
-    cur->pipe = NULL;
-    cur->next = NULL;
-    return cur;
-}
-
-void make_bgrnd(tree *t) {
-    if (t == NULL)
-        return;
-    t->backgrnd = 1;
-    make_bgrnd(t->pipe);
-}
-
-tree *redir_file(List plex) {
-    tree *cur_tree = null_tree();
-    add_arg(plex, cur_tree);
-    plex = plex + cur_tree->argc ;
-    if (*plex != NULL && **plex == '<') {
-        plex++;
-        if (*plex == NULL) {
-            error("Отсутствует аргумент для ввода из файла!\0");
-            clear_tree(&cur_tree);
-            return NULL;
+    if (node->output_file) {
+        if (node->append) {
+            printf("output to end of the file\n");
+        } else {
+            printf("output to begin of the file\n");
         }
-        cur_tree->infile = *plex;
-        plex++;
     }
-    if (*plex != NULL && **plex == '>') {
-        if ((*plex)[1] == '>')
-            cur_tree->append = 1;
-        plex++;
-        if (*plex == NULL) {
-            error("Отсутствует аргумент для вывода в файл!\0");
-            clear_tree(&cur_tree);
-            return NULL;
-        }
-        cur_tree->outfile = *plex;
-    }
-    return cur_tree;
-} 
 
-char **conv_or_not(List plex) {
-    while(*plex != NULL && strcmp(*plex, "|"))
-        if (!(strcmp(*plex, "||") && strcmp(*plex, "&&") && strcmp(*plex, ";") && strcmp(*plex, "&")))
-            return NULL;
-        else
-            plex++;
-    if (*plex == NULL)
-        return NULL;
-    return plex;
+    if (node->background) {
+        printf("background mode\n");
+    } else {
+        printf("normal mode\n");
+    }
+
+    printf("type = %d\n", node->type);
+    if (node->conv) {
+        printf("conv:\n");
+        print_tree(node->conv);  
+    } else {
+        printf("conv = no\n");
+    }
+
+    printf("next = %s\n", node->next ? "yes" : "end");
 }
 
-tree *conveyor(tree *cur_tree, List plex) {
-    tree *prev_tree = cur_tree;
-    cur_tree = redir_file(plex);
-    tree *root = cur_tree;
-    while ((plex = conv_or_not(plex))) { 
-        plex++;
-        if (*plex == NULL) {
-            error("Конвейер не завершен!\0");
-            return NULL;
-        }
-        prev_tree = cur_tree;
-        cur_tree = redir_file(plex);
-        prev_tree->pipe = cur_tree;
+static void free_command(CommandNode *c) {
+    if (!c) return;
+    free(c->cmd);
+    for (int i = 0; i < c->argc; i++) {
+        free(c->argv[i]);
     }
-    return root;
+    free(c->argv);
+    free(c->input_file);
+    free(c->output_file);
+    free(c);
 }
 
-tree *list_of_command(tree* cur_tree, List plex) {
-    tree *prev_tree = cur_tree;
-    cur_tree = conveyor(cur_tree, plex);
-    tree *root = cur_tree;
-    int next;
-    while (*plex != NULL) {
-        if (cur_tree == NULL)
-            return NULL;
-        if (cur_tree->argv != NULL) {
-            while (*plex != NULL) {
-                if (**plex == '&' || **plex == ';'  || !strcmp(*plex, "||"))
-                    break;
-                plex++;
-            }
-            if  (*plex == NULL)
-                break;
-            int flag = 0;
-            if(!strcmp(*plex, ";")) {
-                next = 1;
-                flag = 1;
-                plex++;
-            } else if (!strcmp(*plex, "&")) {
-                flag = 1;
-                make_bgrnd(cur_tree);
-                plex++;
-            } else if (!strcmp(*plex, "&&")) {
-                next = 2;
-                plex++;
-            } else if (!strcmp(*plex, "||")) {
-                next = 3;
-                plex++;
-            }
-            if (*plex == NULL && flag)
-                break;
-            else if (*plex == NULL) {
-                error("Отсутствует команда после && или ||!\0");
-                clear_tree(&cur_tree);
+static CommandNode* parse_pipeline(List *lst) {
+    if (!*lst) return NULL;
+
+    CommandNode *head = NULL;
+    CommandNode *tail = NULL;
+
+    while (*lst) {
+        char *tok = (*lst)->word;
+        if (strcmp(tok, "|") == 0) {
+            *lst = (*lst)->next;
+            continue;
+        }
+        if (strcmp(tok, "<") == 0 || strcmp(tok, ">") == 0 || strcmp(tok, ">>") == 0) {
+            if (!tail) {
+                if (head) {
+                    CommandNode *cur = head;
+                    while (cur) {
+                        CommandNode *next = cur->conv;
+                        free_command(cur);
+                        cur = next;
+                    }
+                }
                 return NULL;
             }
+            *lst = (*lst)->next;
+            if (!*lst) {
+                if (head) {
+                    CommandNode *cur = head;
+                    while (cur) {
+                        CommandNode *next = cur->conv;
+                        free_command(cur);
+                        cur = next;
+                    }
+                }
+                return NULL;
+            }
+            char *file = (*lst)->word;
+            if (strcmp(tok, "<") == 0) {
+                tail->input_file = strdup(file);
+            } else if (strcmp(tok, ">") == 0) {
+                tail->output_file = strdup(file);
+                tail->append = false;
+            } else if (strcmp(tok, ">>") == 0) {
+                tail->output_file = strdup(file);
+                tail->append = true;
+            }
+            *lst = (*lst)->next;
+            continue;
+        }
+        if (strcmp(tok, "&") == 0) {
+            if (!tail) {
+                if (head) {
+                    CommandNode *cur = head;
+                    while (cur) {
+                        CommandNode *next = cur->conv;
+                        free_command(cur);
+                        cur = next;
+                    }
+                }
+                return NULL;
+            }
+            tail->background = true;
+            *lst = (*lst)->next;
+            continue;
+        }
+
+        CommandNode *cmd = new_command(tok);
+        *lst = (*lst)->next;
+
+        while (*lst) {
+            tok = (*lst)->word;
+            if (strcmp(tok, "|") == 0 || strcmp(tok, "<") == 0 || strcmp(tok, ">") == 0 ||
+                strcmp(tok, ">>") == 0 || strcmp(tok, "&") == 0 ||
+                strcmp(tok, ";") == 0 || strcmp(tok, "&&") == 0 || strcmp(tok, "||") == 0) {
+                break;
+            }
+            add_arg(cmd, tok);
+            *lst = (*lst)->next;
+        }
+
+        if (!head) {
+            head = cmd;
         } else {
-            error("Отсутствуют аргументы!\0");
-            clear_tree(&cur_tree);
+            tail->conv = cmd;
+        }
+        tail = cmd;
+    }
+
+    return head;
+}
+
+static CommandNode* parse_sequence(List *lst) {
+    if (!*lst) return NULL;
+
+    CommandNode *head = NULL;
+    CommandNode *tail = NULL;
+
+    while (*lst) {
+        CommandNode *pipeline = parse_pipeline(lst);
+        if (!pipeline) {
+            // Ошибка в парсинге конвейера — очищаем всё
+            if (head) {
+                CommandNode *cur = head;
+                while (cur) {
+                    CommandNode *next = cur->next;
+                    // Освобождаем конвейер текущей команды
+                    CommandNode *conv_cur = cur->conv;
+                    while (conv_cur) {
+                        CommandNode *conv_next = conv_cur->conv;
+                        free_command(conv_cur);
+                        conv_cur = conv_next;
+                    }
+                    free_command(cur);
+                    cur = next;
+                }
+            }
             return NULL;
         }
-        prev_tree = cur_tree;
-        cur_tree = conveyor(prev_tree, plex);
-        if (cur_tree)
-            cur_tree->tnext = next;
-        prev_tree->next = cur_tree;
-    }
-    return root;
-}
 
-tree *create_tree(List lst) {
-    tree *cur_tree = NULL;
-    cur_tree = list_of_command(cur_tree, lst);
-    return cur_tree;
-}
-
-
-void make_tab(int n) {
-    while (n--)
-        printf(" ");
-}
-
-void print_argv(char **p, int shift) {
-    char **q = p;
-    if (p != NULL) {
-        while (*p != NULL) {
-             make_tab(shift);
-             printf("argument %d = %s\n",(int) (p-q), *p);
-             p++;
+        if (!head) {
+            head = pipeline;
+        } else {
+            tail->next = pipeline;
         }
+
+        if (*lst) {
+            char *op = (*lst)->word;
+            if (strcmp(op, "&&") == 0) tail->type = 1;
+            else if (strcmp(op, "||") == 0) tail->type = 2;
+            else if (strcmp(op, ";") == 0) tail->type = 3;
+            *lst = (*lst)->next;
+        }
+
+        tail = pipeline;
+        while (tail->conv) tail = tail->conv;
     }
+
+    return head;
 }
 
+Tree* create_tree(List lst) {
+    Tree *t = malloc(sizeof(Tree));
+    t->root = parse_sequence(&lst);
+    return t;
+}
 
-void print_tree(tree *t, int shift) {
-    if (t == NULL)
-        return;
-    char **p;
-    p = t->argv;
-    make_tab(shift);
-    printf("%snumber of arguments = %d\n","\033[1;35m", t->argc);
-    if (p != NULL)
-        print_argv(p, shift);
-    make_tab(shift);
-    if (t->infile == NULL)
-        printf("input from a file = no\n");
-    else
-        printf("input from a file = %s\n", t->infile);
-    make_tab(shift);
-    if (t->outfile == NULL)
-        printf("output to a file = no\n");
-    else
-        printf("output to a file = %s\n", t->outfile);
-    make_tab(shift);
-    printf("output to the %s of the file\n", t->append == 0 ? "begin" : "end");
-    make_tab(shift);
-    printf("working in %s\n", t->backgrnd == 0 ? "normal mode" : "the background");
-    make_tab(shift);
-    printf("type = %s\n", t->tnext == 1 ? "NXT" : t->tnext == 2 ? "AND" : t->tnext == 3 ? "OR" : "0");
-    printf("%s", "\033[0m");
-    make_tab(shift);
-    if (t->pipe == NULL)
-        printf("%sconveyor = no%s\n", "\033[1;35m", "\033[0m");
-    else {
-        printf("%sconveyor:%s\n", "\033[1;35m", "\033[0m");
-        print_tree(t->pipe, shift + 5);
+void clear_tree(Tree **tr) {
+    if (!tr || !*tr) return;
+    CommandNode *cur = (*tr)->root;
+    while (cur) {
+        CommandNode *next = cur->next;
+        // Освобождаем конвейер
+        CommandNode *conv_cur = cur->conv;
+        while (conv_cur) {
+            CommandNode *conv_next = conv_cur->conv;
+            free_command(conv_cur);
+            conv_cur = conv_next;
+        }
+        free_command(cur);
+        cur = next;
     }
-    make_tab(shift);
-    if (t->next == NULL)
-        printf("%snext = end%s\n", "\033[1;35m", "\033[0m");
-    else {
-        printf("%snext:%s\n", "\033[1;35m", "\033[0m");
-        print_tree(t->next, shift + 5);
-    }
+    free(*tr);
+    *tr = NULL;
 }

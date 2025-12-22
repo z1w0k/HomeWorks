@@ -1,16 +1,12 @@
-#ifndef __EXEC__
-#define __EXEC__
-#include "tree.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <limits.h>
+#ifndef __EXEC_H__
+#define __EXEC_H__
 
-void handler(tree *);
+#include "tree.h"
+#include <stdbool.h>
+#include <signal.h>  // <-- ДОБАВЛЕНО для sig_atomic_t
+
+extern volatile sig_atomic_t flag_exit;
+
+void execute_tree(Tree *tr);
 
 #endif

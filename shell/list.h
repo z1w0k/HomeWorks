@@ -1,18 +1,12 @@
-#ifndef LIST_H
-#define LIST_H
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <pwd.h>
-#include <unistd.h>
+#ifndef __LIST_H__
+#define __LIST_H__
 
-typedef char ** List;
+typedef struct list {
+    char *word;
+    struct list *next;
+} *List;
 
+int buildlist(List *lst);
 void clearlist(List *lst);
-void printlist(List lst, int sizelist);
-int symset(int c);
-void changelist(List lst, int size);
-int buildlist(List *lst, int *size, int *isthere);
 
 #endif

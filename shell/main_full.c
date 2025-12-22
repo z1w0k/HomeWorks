@@ -3,22 +3,18 @@
 #include <setjmp.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <limits.h>
 #include <unistd.h>
 #include <string.h>
-#include <stdlib.h>
 
 static jmp_buf jmpbuf;
 static Tree *global_tr = NULL;
 static List global_lst = NULL;
 
 static void cleanup_on_exit(void) {
-    if (global_tr) {
-        clear_tree(&global_tr);
-    }
-    if (global_lst) {
-        clearlist(&global_lst);
-    }
+    if (global_tr) clear_tree(&global_tr);
+    if (global_lst) clearlist(&global_lst);
 }
 
 static void sigint_handler(int sig) {
@@ -38,16 +34,12 @@ int main() {
     List lst = NULL;
 
     while (!flag_exit) {
-        if (!getcwd(cwd, sizeof(cwd))) {
-            strcpy(cwd, ".");
-        }
+        if (!getcwd(cwd, sizeof(cwd))) strcpy(cwd, ".");
         printf("%s$ ", cwd);
         fflush(stdout);
 
         int eof = buildlist(&lst);
-        if (eof) {
-            break;
-        }
+        if (eof) break;
 
         global_lst = lst;
         tr = create_tree(lst);

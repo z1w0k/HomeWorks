@@ -1,280 +1,145 @@
 #include "list.h"
-#define SIZE 16
-static int c;       
-static char * buf;  
-static int sizebuf;
-static int sizelist;
-static int curbuf;  
-static int curlist; 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <unistd.h>
+#include <pwd.h>
 
-static void nulllist(List *lst) {
-    sizelist = 0;
-    curlist = 0;
+#define MAX_LINE 1024
+
+int buildlist(List *lst) {
+    char buffer[MAX_LINE];
+    if (!fgets(buffer, sizeof(buffer), stdin)) {
+        return 1;
+    }
+
     *lst = NULL;
-}
+    List *tail = lst;
 
-static void termlist(List *lst) {
-    List t = *lst;
-    if (t == NULL)
-        return;
-    if (curlist > (sizelist - 1))
-        t = (List) realloc(t, (sizelist + 1)*sizeof(*t));   
-    t[curlist] = NULL;
-    t = (List) realloc(t, (sizelist = curlist + 1)*sizeof(*t));
-    *lst = t;
+    char *p = buffer;
+    while (*p) {
+        while (isspace((unsigned char)*p)) p++;
+        if (*p == '\0' || *p == '\n') break;
+
+        char *start = p;
+        if (*p == '|' || *p == '<' || *p == '>' || *p == '&' || *p == ';') {
+            if (*p == '>' && *(p + 1) == '>') {
+                p += 2;
+                char *dup = strdup(">>");
+                List node = malloc(sizeof(struct list));
+                node->word = dup;
+                node->next = NULL;
+                *tail = node;
+                tail = &node->next;
+            } else if (*p == '&' && *(p + 1) == '&') {
+                p += 2;
+                char *dup = strdup("&&");
+                List node = malloc(sizeof(struct list));
+                node->word = dup;
+                node->next = NULL;
+                *tail = node;
+                tail = &node->next;
+            } else if (*p == '|' && *(p + 1) == '|') {
+                p += 2;
+                char *dup = strdup("||");
+                List node = malloc(sizeof(struct list));
+                node->word = dup;
+                node->next = NULL;
+                *tail = node;
+                tail = &node->next;
+            } else {
+                char sym[2] = {*p, '\0'};
+                char *dup = strdup(sym);
+                List node = malloc(sizeof(struct list));
+                node->word = dup;
+                node->next = NULL;
+                *tail = node;
+                tail = &node->next;
+                p++;
+            }
+        } else {
+            if (*p == '$') {
+                p++;
+                if (strncmp(p, "HOME", 4) == 0 && (p[4] == '\0' || isspace(p[4]) || p[4] == '|' || p[4] == '<' || p[4] == '>' || p[4] == '&' || p[4] == ';' || p[4] == '\n')) {
+                    p += 4;
+                    char *val = getenv("HOME");
+                    if (!val) val = "/";
+                    char *dup = strdup(val);
+                    List node = malloc(sizeof(struct list));
+                    node->word = dup;
+                    node->next = NULL;
+                    *tail = node;
+                    tail = &node->next;
+                    continue;
+                } else if (strncmp(p, "SHELL", 5) == 0 && (p[5] == '\0' || isspace(p[5]) || p[5] == '|' || p[5] == '<' || p[5] == '>' || p[5] == '&' || p[5] == ';' || p[5] == '\n')) {
+                    p += 5;
+                    char *val = getenv("SHELL");
+                    if (!val) val = "/bin/sh";
+                    char *dup = strdup(val);
+                    List node = malloc(sizeof(struct list));
+                    node->word = dup;
+                    node->next = NULL;
+                    *tail = node;
+                    tail = &node->next;
+                    continue;
+                } else if (strncmp(p, "USER", 4) == 0 && (p[4] == '\0' || isspace(p[4]) || p[4] == '|' || p[4] == '<' || p[4] == '>' || p[4] == '&' || p[4] == ';' || p[4] == '\n')) {
+                    p += 4;
+                    char *val = getlogin();
+                    if (!val) {
+                        struct passwd *pw = getpwuid(geteuid());
+                        if (pw) val = pw->pw_name;
+                        else val = "unknown";
+                    }
+                    char *dup = strdup(val);
+                    List node = malloc(sizeof(struct list));
+                    node->word = dup;
+                    node->next = NULL;
+                    *tail = node;
+                    tail = &node->next;
+                    continue;
+                } else if (strncmp(p, "EUID", 4) == 0 && (p[4] == '\0' || isspace(p[4]) || p[4] == '|' || p[4] == '<' || p[4] == '>' || p[4] == '&' || p[4] == ';' || p[4] == '\n')) {
+                    p += 4;
+                    char buf[32];
+                    snprintf(buf, sizeof(buf), "%u", geteuid());
+                    char *dup = strdup(buf);
+                    List node = malloc(sizeof(struct list));
+                    node->word = dup;
+                    node->next = NULL;
+                    *tail = node;
+                    tail = &node->next;
+                    continue;
+                }
+                p--;
+            }
+
+            while (*p && !isspace((unsigned char)*p) &&
+                   *p != '|' && *p != '<' && *p != '>' && *p != '&' && *p != ';') {
+                if (*p == '\'' || *p == '"') {
+                    char quote = *p;
+                    p++;
+                    while (*p && *p != quote) p++;
+                    if (*p) p++;
+                } else {
+                    p++;
+                }
+            }
+            char *word = strndup(start, p - start);
+            List node = malloc(sizeof(struct list));
+            node->word = word;
+            node->next = NULL;
+            *tail = node;
+            tail = &node->next;
+        }
+    }
+    return 0;
 }
 
 void clearlist(List *lst) {
-    List t = *lst;
-    int i;
-    sizelist = 0;
-    curlist = 0;
-    if (t == NULL) 
-        return;
-    for (i = 0; t[i] != NULL; i++)
-        free(t[i]);
-    free(t);
-    *lst = NULL;
-}
-
-void printlist(List lst, int sizelist) {
-    int i;
-    if (lst == NULL) 
-        return;
-    for (i = 0; i < (sizelist - 1); i++)
-        printf("%s ", lst[i]);
-    printf("\n");
-}
-
-static void nullbuf() {
-    buf = NULL;
-    sizebuf = 0;
-    curbuf = 0;
-}
-
-static void addword(List *lst) {
-    List tlst = *lst;
-    if (curbuf > (sizebuf - 1)) {
-        char * t = realloc(buf, sizebuf += SIZE);
-        if (t != NULL)
-            buf = t;
+    while (*lst) {
+        List tmp = *lst;
+        *lst = (*lst)->next;
+        free(tmp->word);
+        free(tmp);
     }
-    buf[curbuf++] = '\0';
-    buf = realloc(buf, sizebuf = curbuf);
-    if (curlist > (sizelist - 1))
-        tlst = realloc(tlst, (sizelist += SIZE)*sizeof(*tlst));
-    tlst[curlist++] = buf;
-    *lst = tlst;
-}
-
-static void addsym() {
-    if (curbuf > (sizebuf - 1)) {
-        char *t = realloc(buf, sizebuf += SIZE);
-        if (t != NULL)
-            buf = t;
-    }
-    buf[curbuf++] = c;
-}
-
-static char str[10];
-static int ind = 0;
-
-static void getsym() {
-    if (str[ind] == '\0') {
-        ind = 0;
-        str[0] = '\n';
-        fscanf(stdin, "%9[^\n]", str);
-        c = getchar();
-        if (c != EOF) {
-            int i;
-            for (i = 0; str[i] != '\0'; i++);
-            str[i] = c;
-            str[i+1] = '\0';
-        } else
-            return;
-    }
-    c = str[ind++];
-}
-
-int symset(int c) {
-    return c != '\n' &&
-           c != '\t' &&
-           c != ' ' &&
-           c != '>' &&
-           c != '<' &&
-           c != '&' &&
-           c != '|' &&
-           c != '(' &&
-           c != ')' &&
-           c != ';' &&
-           c != EOF;
-}
-
-void changelist(List lst, int size) { 
-    if (lst == NULL) 
-        return;
-    for (int i = 0; i < (size - 1); i++) {
-        if (!strcmp(lst[i], "$USER\0")) {
-            struct passwd *temp;
-            temp = getpwuid(geteuid());
-            lst[i] = realloc(lst[i], strlen(temp->pw_name) + 1);
-            strcpy(lst[i], temp -> pw_name);
-        } else if (!strcmp(lst[i], "$EUID\0")) {  
-            int uid = (int) geteuid(), len, temp;
-            temp = uid;
-            for (len = 0; temp > 9; len++) 
-                temp = temp / 10;
-            lst[i] = realloc(lst[i], len + 2);
-            sprintf(lst[i], "%d", uid);
-        } else if (!strcmp(lst[i], "$SHELL\0")) {
-            int len = strlen(getenv("PWD"));
-            lst[i] = realloc(lst[i], len + 1);
-            strcpy(lst[i], getenv("PWD"));
-        } else if (!strcmp(lst[i], "$HOME\0")) {
-            int len = strlen(getenv("HOME"));
-            lst[i] = realloc(lst[i], len + 1);
-            strcpy(lst[i], getenv("HOME"));
-        }
-    }           
-    return;
-}
-
-int buildlist(List *lst, int* size, int* isthere) {
-    typedef enum {Start, Comment, Quot, Word, Greater, Greater2,
-        Smaller, Vert, Vert2, Amp, Amp2, Sem, Par, Stop} vertex;
-    vertex V = Start;
-    for (int i = 0; i < 10; str[i] = '\0', i++);
-    getsym();
-    nulllist(lst);
-    nullbuf();
-    while (1) 
-        switch(V) {
-            case Start:
-                if (c == ' ' || c == '\t') 
-                    getsym();
-                else if (c == '\n') {
-                    termlist(lst);
-                    V = Stop;
-                } else if (c == '\"') {
-                    V = Quot;
-                    getsym();
-                } else if (c == '#') {
-                    V = Comment;
-                    getsym();
-                } else if (c == EOF) {
-                    termlist(lst);
-                    V = Stop;
-                } else {  
-                    nullbuf();
-                    addsym();
-                    switch(c) {
-                        case '(': 
-                        case ')':
-                            V = Par;
-                            break;
-                        case '>':
-                            V = Greater;
-                            break;
-                        case '<':
-                            V = Smaller;
-                            break;
-                        case '|':
-                            V = Vert;
-                            break;
-                        case '&':
-                            V = Amp;
-                            break;
-                        case ';':
-                            V = Sem;
-                            break;
-                        default:
-                            V = Word;
-                            break;
-                    }
-                    getsym();
-                }
-                break;
-            case Comment:
-                if (c == '#')
-                    V = Start;
-                getsym();
-                break;
-            case Quot:
-                nullbuf();
-                while (c != '\"' && c != EOF && c != '\n') {
-                    addsym();
-                    getsym();
-                }
-                V = Start;
-                addword(lst);
-                getsym();
-                break;
-            case Word:
-                if (symset(c)) {
-                    addsym();
-                    getsym();
-                } else {
-                    V = Start;
-                    addword(lst);
-                }
-                break;
-            case Greater:
-                if (c == '>') {
-                    addsym();
-                    getsym();
-                    V = Greater2;
-                } else {
-                    V = Start;
-                    addword(lst);
-                }
-                break;
-            case Greater2:
-                V = Start;
-                addword(lst);
-                break;
-            case Smaller:
-                V = Start;
-                addword(lst);
-                break;
-            case Vert:
-                if (c == '|') {
-                    addsym();
-                    getsym();
-                    V = Vert2;
-                } else {
-                    V = Start;
-                    addword(lst);
-                }
-                break;
-            case Vert2:
-                V = Start;
-                addword(lst);
-                break;
-            case Amp:
-                if (c == '&') {
-                    addsym();
-                    getsym();
-                    V = Amp2;
-                } else {
-                    V = Start;
-                    addword(lst);
-                }
-                break;
-            case Amp2:
-                V = Start;
-                addword(lst);
-                break;
-            case Sem:
-                V = Start;
-                addword(lst);
-                break;
-            case Par:
-                V = Stop;
-                *isthere = 1;
-                break;
-            case Stop:
-                *size = sizelist;
-                return (c == EOF) ? 1 : 0;
-                break;
-        }
 }

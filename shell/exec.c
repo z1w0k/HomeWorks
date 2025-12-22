@@ -1,182 +1,169 @@
 #include "exec.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <limits.h>
 
-int flag_exit = 0;
+volatile sig_atomic_t flag_exit = 0;
 
-int cd(int argc, char **argv) {
-    char *s;
-    if (argc == 0) {
-        s = getenv("HOME");
-        if (s == NULL) {
-            error("Ошибка смены директории!\0");
-            return 1;
+static bool is_internal(char *cmd) {
+    return strcmp(cmd, "cd") == 0 || strcmp(cmd, "pwd") == 0 || strcmp(cmd, "exit") == 0;
+}
+
+static void run_internal(CommandNode *cmd) {
+    if (strcmp(cmd->cmd, "cd") == 0) {
+        if (cmd->argc < 2) {
+            chdir(getenv("HOME"));
         } else {
-            chdir(s);
-            return 0;
-        }
-    } else if (argc > 2) {
-        error("Ошибка: cd допускает 1 аргумент!\0");
-        return 1;
-    } else if (chdir(argv[1])) {
-        error("Ошибка смены директории!\0");
-        return 1;
-    }
-    return 0;
-}
-
-void files_in_out(tree *root) {
-    if (root->infile != NULL) {
-        int file_in;
-        file_in  = open(root->infile, O_RDONLY);
-        if (file_in == -1) {
-            error("Входного файла не существует!\0");
-            exit(1);
-        } else 
-            dup2(file_in, 0);
-        close(file_in);
-    }
-    if (root->outfile != NULL) {
-        int file_out;
-        if (root->append == 1)
-            file_out = open(root->outfile, O_WRONLY | O_APPEND | O_CREAT, 0664);
-        else
-            file_out = open(root->outfile, O_WRONLY | O_TRUNC | O_CREAT, 0664);
-        if (file_out == -1) {
-            error("Невозможно перенаправить вывод!\0");
-            exit(1);
-        } else 
-            dup2(file_out, 1);
-        close(file_out);
-    }
-}
-
-int pwd(tree *root) {
-    int status;
-    if (fork() == 0) {
-        char *cwd = (char *) malloc(PATH_MAX * sizeof(char));
-        files_in_out(root);
-        if (getcwd(cwd, sizeof(char) * PATH_MAX) == NULL) {
-            error("Невозможно получить текущий путь!\0");
-            free(cwd);
-            exit(1);
-        } else
-            printf("%s\n", cwd);
-        free(cwd);
-        exit(0);
-    }
-    wait(&status);
-    return status;
-} 
-
-void cmd_processing(tree *cur_tree, int backgrnd) {
-    files_in_out(cur_tree);
-    if ((backgrnd) && (cur_tree->backgrnd)) {
-        int f = open("/dev/null", O_RDONLY);
-        dup2(f, 0);
-        close(f);
-    }
-    execvp(cur_tree->argv[0], cur_tree->argv);
-    fprintf(stderr, "\n%s: команда не найдена\n\n", *(cur_tree->argv));
-    exit(1);
-}
-
-int pipe_processing(tree *root) {
-    if (root == NULL)
-        return 0;
-    if (root->argv && !strcmp(root->argv[0], "exit")) {
-        flag_exit = 1;
-        return 0;
-    }
-    if (root->argv && !strcmp(root->argv[0], "cd")) {
-        return cd(root->argc, root->argv);
-    }
-   if (root->argv && !strcmp(root->argv[0], "pwd")) {
-        return pwd(root);
-    }
-    int ppid, res = 0;
-    if ((ppid = fork()) == 0) {
-        int pid;
-        ppid = getpid();
-        if ((pid = fork()) == 0) {
-            tree* cur_tree = root;
-            int fd_temp, fd[2];
-            fd_temp = -1;
-            if (root->backgrnd)
-                signal(SIGINT, SIG_IGN);
-            else
-                signal(SIGINT, SIG_DFL);
-            while (cur_tree != NULL) {
-                if (cur_tree == root) {
-                    if (cur_tree->pipe != NULL) {
-                        if (pipe(fd) < 0)
-                            exit(1);
-                        if ((pid = fork()) == 0) {
-                            dup2(fd[1], 1);
-                            close(fd[0]);
-                            close(fd[1]);
-                            cmd_processing(cur_tree, 1);
-                        }
-                        close(fd[1]);
-                        fd_temp = fd[0];
-                    } else if ((pid = fork()) == 0) 
-                        cmd_processing(cur_tree, 1);
-                } else if (cur_tree->pipe == NULL) {
-                    if ((pid = fork()) == 0) {
-                        dup2(fd_temp, 0);
-                        close(fd_temp);
-                        cmd_processing(cur_tree, 0);
-                    }
-                    close(fd_temp);
-                } else {                            
-                    if (pipe(fd) < 0)
-                        exit(1);
-                    if ((pid = fork()) == 0) {
-                        dup2(fd_temp, 0);
-                        dup2(fd[1], 1);
-                        close(fd[0]);
-                        close(fd[1]);
-                        close(fd_temp);
-                        cmd_processing(cur_tree, 0);
-                    }
-                    close(fd[1]);
-                    close(fd_temp);
-                    fd_temp = fd[0];
-                }
-                cur_tree = cur_tree->pipe;
+            if (chdir(cmd->argv[1]) != 0) {
+                perror("cd");
             }
-            waitpid(pid, &res, 0);
-            while (wait(NULL) != -1);
-            if (WIFEXITED(res))
-                res = WEXITSTATUS(res);
-            exit(res);
         }
-        if (root->backgrnd)
-            exit(0);
-        else {
-            waitpid(pid, &res, 0);
-            if (WIFEXITED(res))
-                res = WEXITSTATUS(res);
-            exit(res);
+    } else if (strcmp(cmd->cmd, "pwd") == 0) {
+        char cwd[PATH_MAX];
+        if (getcwd(cwd, sizeof(cwd))) {
+            printf("%s\n", cwd);
+        } else {
+            perror("pwd");
         }
-    } 
-    waitpid(ppid, &res, 0);
-    if (WIFEXITED(res))
-        res = WEXITSTATUS(res);
-    return res;
+    } else if (strcmp(cmd->cmd, "exit") == 0) {
+        flag_exit = 1;
+    }
 }
 
-void handler(tree *cur_tree) {
-    if (cur_tree == NULL)
-        return;
-    int status_prev = 0;
-    while (cur_tree != NULL) {
-        if (cur_tree->tnext < 2)                
-            status_prev = pipe_processing(cur_tree);
-        else if (cur_tree->tnext == 2 && status_prev == 0)  
-            status_prev = pipe_processing(cur_tree);
-        else if (cur_tree->tnext == 3 && status_prev == 1)  
-            status_prev = pipe_processing(cur_tree);
-        if (flag_exit == 1)
-            return;
-        cur_tree = cur_tree->next;
+static int run_pipeline(CommandNode *cmd) {
+    if (!cmd) return 0;
+
+    int saved_stdin = dup(STDIN_FILENO);
+    int saved_stdout = dup(STDOUT_FILENO);
+    if (saved_stdin == -1 || saved_stdout == -1) {
+        perror("dup");
+        if (saved_stdin != -1) close(saved_stdin);
+        if (saved_stdout != -1) close(saved_stdout);
+        return 1;
+    }
+
+    int status = 0;
+    int pipefd[2] = {-1, -1};
+    CommandNode *cur = cmd;
+
+    while (cur) {
+        if (cur->conv) {
+            pipefd[0] = -1;
+            pipefd[1] = -1;
+            if (pipe(pipefd) == -1) {
+                perror("pipe");
+                goto cleanup;
+            }
+        }
+
+        pid_t pid = fork();
+        if (pid == 0) {
+            // Child
+            if (cur->input_file) {
+                int fd = open(cur->input_file, O_RDONLY);
+                if (fd < 0) {
+                    perror(cur->input_file);
+                    exit(1);
+                }
+                dup2(fd, STDIN_FILENO);
+                close(fd);
+            } else if (cur != cmd) {
+                dup2(saved_stdin, STDIN_FILENO);
+            }
+
+            if (cur->output_file) {
+                int flags = O_WRONLY | O_CREAT | (cur->append ? O_APPEND : O_TRUNC);
+                int fd = open(cur->output_file, flags, 0644);
+                if (fd < 0) {
+                    perror(cur->output_file);
+                    exit(1);
+                }
+                dup2(fd, STDOUT_FILENO);
+                close(fd);
+            } else if (cur->conv) {
+                dup2(pipefd[1], STDOUT_FILENO);
+            }
+
+            if (saved_stdin != -1) close(saved_stdin);
+            if (saved_stdout != -1) close(saved_stdout);
+            if (pipefd[0] != -1) close(pipefd[0]);
+            if (pipefd[1] != -1) close(pipefd[1]);
+
+            if (is_internal(cur->cmd)) {
+                run_internal(cur);
+                exit(0);
+            } else {
+                execvp(cur->cmd, cur->argv);
+                fprintf(stderr, "%s: command not found\n", cur->cmd);
+                exit(127);
+            }
+        }
+
+        if (cur->conv) {
+            if (pipefd[1] != -1) close(pipefd[1]);
+            if (saved_stdin != -1) close(saved_stdin);
+            saved_stdin = pipefd[0];
+        } else {
+            if (saved_stdin != -1) {
+                close(saved_stdin);
+                saved_stdin = -1;
+            }
+            if (saved_stdout != -1) {
+                close(saved_stdout);
+                saved_stdout = -1;
+            }
+        }
+
+        if (!cur->background) {
+            waitpid(pid, &status, 0);
+        }
+
+        cur = cur->conv;
+    }
+
+    if (saved_stdin != -1) {
+        dup2(saved_stdin, STDIN_FILENO);
+        close(saved_stdin);
+    }
+    if (saved_stdout != -1) {
+        dup2(saved_stdout, STDOUT_FILENO);
+        close(saved_stdout);
+    }
+
+    return WIFEXITED(status) ? WEXITSTATUS(status) : 1;
+
+cleanup:
+    if (saved_stdin != -1) close(saved_stdin);
+    if (saved_stdout != -1) close(saved_stdout);
+    if (pipefd[0] != -1) close(pipefd[0]);
+    if (pipefd[1] != -1) close(pipefd[1]);
+    return 1;
+}
+
+void execute_tree(Tree *tr) {
+    if (!tr || !tr->root) return;
+
+    CommandNode *cur = tr->root;
+    int last_status = 0;
+
+    while (cur && !flag_exit) {
+        printf("\n");
+
+        if (is_internal(cur->cmd)) {
+            run_internal(cur);
+            last_status = flag_exit ? 0 : (errno ? 1 : 0);
+        } else {
+            last_status = run_pipeline(cur);
+        }
+
+        if (cur->type == 1 && last_status != 0) break; 
+        if (cur->type == 2 && last_status == 0) break; 
+
+        cur = cur->next;
     }
 }
