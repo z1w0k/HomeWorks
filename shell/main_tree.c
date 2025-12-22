@@ -42,7 +42,7 @@ int main() {
         tr = create_tree(lst);
         if (tr) {
             if (tr->root) {
-                print_tree(tr->root); // ← Обратите внимание: передаём root
+                print_tree(tr->root); 
             }
             clear_tree(&tr);
         }

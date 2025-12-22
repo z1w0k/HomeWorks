@@ -152,7 +152,6 @@ void execute_tree(Tree *tr) {
     int last_status = 0;
 
     while (cur && !flag_exit) {
-        printf("\n");
 
         if (is_internal(cur->cmd)) {
             run_internal(cur);
