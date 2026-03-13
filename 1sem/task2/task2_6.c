@@ -96,6 +96,21 @@ void CleanTree(tnode **tree) {
   *tree = NULL;
 }
 
+int CountBalancedTrees(tnode *tree) {
+    int count = 0;
+
+    if (tree == NULL) {
+        return 1;
+    }
+
+    if ((tree->right != NULL) && (tree->left != NULL) || ((tree->right == NULL) && (tree->left == NULL))) {
+        count = 1;
+    }
+    
+    return count + CountBalancedTrees(tree->left) + CountBalancedTrees(tree->right);
+
+}
+
 int main() {
   tnode *tree = NULL;
   char command;
@@ -119,6 +134,8 @@ int main() {
       }
     }
   }
+
+  printf("Колличество сбалансированных деревьев = %d\n ",CountBalancedTrees(tree));
   
   CleanTree(&tree);
   return 0;

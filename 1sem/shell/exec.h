@@ -3,9 +3,9 @@
 
 #include "tree.h"
 #include <stdbool.h>
-#include <signal.h>  // <-- ДОБАВЛЕНО для sig_atomic_t
+#include <signal.h> 
 
-extern volatile sig_atomic_t flag_exit;
+extern volatile int flag_exit;
 
 void execute_tree(Tree *tr);
 

@@ -3,6 +3,8 @@
 #include <string.h>
 #include <stdio.h>
 
+int depth = 1;
+
 static CommandNode* new_command(char *cmd) {
     CommandNode *c = calloc(1, sizeof(CommandNode));
     c->cmd = strdup(cmd);
@@ -29,13 +31,6 @@ void print_tree(CommandNode *node) {
     printf("input from = %s\n", node->input_file ? node->input_file : "no");
     printf("output to = %s\n", node->output_file ? node->output_file : "no");
 
-    if (node->output_file) {
-        if (node->append) {
-            printf("output to end of the file\n");
-        } else {
-            printf("output to begin of the file\n");
-        }
-    }
 
     if (node->background) {
         printf("background mode\n");
@@ -46,12 +41,15 @@ void print_tree(CommandNode *node) {
     printf("type = %d\n", node->type);
     if (node->conv) {
         printf("conv:\n");
-        print_tree(node->conv);  
+        printf("\tDepth = %d:\n", depth);
+        depth++;
+        print_tree(node->conv);
     } else {
         printf("conv = no\n");
     }
 
-    printf("next = %s\n", node->next ? "yes" : "end");
+    depth = 1;
+
 }
 
 static void free_command(CommandNode *c) {
@@ -115,7 +113,8 @@ static CommandNode* parse_pipeline(List *lst) {
             *lst = (*lst)->next;
             continue;
         }
-        if (strcmp(tok, "&") == 0) {
+
+        if ((strcmp(tok, "&") == 0)) {
             if (!tail) {
                 if (head) {
                     CommandNode *cur = head;
@@ -137,9 +136,7 @@ static CommandNode* parse_pipeline(List *lst) {
 
         while (*lst) {
             tok = (*lst)->word;
-            if (strcmp(tok, "|") == 0 || strcmp(tok, "<") == 0 || strcmp(tok, ">") == 0 ||
-                strcmp(tok, ">>") == 0 || strcmp(tok, "&") == 0 ||
-                strcmp(tok, ";") == 0 || strcmp(tok, "&&") == 0 || strcmp(tok, "||") == 0) {
+            if (strcmp(tok, "|") == 0) {
                 break;
             }
             add_arg(cmd, tok);
@@ -166,12 +163,10 @@ static CommandNode* parse_sequence(List *lst) {
     while (*lst) {
         CommandNode *pipeline = parse_pipeline(lst);
         if (!pipeline) {
-            // Ошибка в парсинге конвейера — очищаем всё
             if (head) {
                 CommandNode *cur = head;
                 while (cur) {
                     CommandNode *next = cur->next;
-                    // Освобождаем конвейер текущей команды
                     CommandNode *conv_cur = cur->conv;
                     while (conv_cur) {
                         CommandNode *conv_next = conv_cur->conv;
@@ -217,7 +212,6 @@ void clear_tree(Tree **tr) {
     CommandNode *cur = (*tr)->root;
     while (cur) {
         CommandNode *next = cur->next;
-        // Освобождаем конвейер
         CommandNode *conv_cur = cur->conv;
         while (conv_cur) {
             CommandNode *conv_next = conv_cur->conv;

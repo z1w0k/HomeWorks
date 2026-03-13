@@ -8,7 +8,8 @@
 #include <errno.h>
 #include <limits.h>
 
-volatile sig_atomic_t flag_exit = 0;
+volatile int flag_exit = 0;
+int stat = 1;
 
 static bool is_internal(char *cmd) {
     return strcmp(cmd, "cd") == 0 || strcmp(cmd, "pwd") == 0 || strcmp(cmd, "exit") == 0;
@@ -63,7 +64,6 @@ static int run_pipeline(CommandNode *cmd) {
 
         pid_t pid = fork();
         if (pid == 0) {
-            // Child
             if (cur->input_file) {
                 int fd = open(cur->input_file, O_RDONLY);
                 if (fd < 0) {
@@ -122,7 +122,6 @@ static int run_pipeline(CommandNode *cmd) {
         if (!cur->background) {
             waitpid(pid, &status, 0);
         }
-
         cur = cur->conv;
     }
 
@@ -134,7 +133,6 @@ static int run_pipeline(CommandNode *cmd) {
         dup2(saved_stdout, STDOUT_FILENO);
         close(saved_stdout);
     }
-
     return WIFEXITED(status) ? WEXITSTATUS(status) : 1;
 
 cleanup:
