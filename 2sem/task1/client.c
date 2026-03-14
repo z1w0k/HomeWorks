@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
     int port = DEFAULT_PORT;
 
     if (argc < 3) {
-        fprintf(stderr, "Использование: %s <IP сервера> <порт>\n", argv[0]);
+        fprintf(stderr, "Используется %s\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    printf("Подключен к серверу %s:%d.\nВводите данные:.\n", server_ip, port);
+    printf("Подключен к серверу %s:%d.\nВводите данные:\n", server_ip, port);
 
     while (1) {
         fflush(stdout);

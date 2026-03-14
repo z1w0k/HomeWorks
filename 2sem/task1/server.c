@@ -25,6 +25,9 @@ void handle_client(int client_fd) {
     char buffer[BUFFER_SIZE];
     int increment = 1;
     ssize_t bytes_read;
+    int multiplicator = 1;
+    int multiplicator_flag = 0;
+    int increment_flag = 0;
 
     signal(SIGTERM, child_sig_handler);
 
@@ -43,12 +46,10 @@ void handle_client(int client_fd) {
 
         if (buffer[0] == '+') {
             int new_inc = atoi(buffer + 1);
-            if (new_inc > 0) {
-                increment = new_inc;
-                send(client_fd, "Ok\n", 3, 0);
-            } else {
-                send(client_fd, "Ошибка: число должно быть положительным\n", 41, 0);
-            }
+            increment_flag = 1;
+            multiplicator_flag = 0;
+            increment = new_inc;
+            send(client_fd, "Ok\n",3, 0);
         }
         else if (buffer[0] == '\\') {
             if (strcmp(buffer, "\\?") == 0) {
@@ -57,16 +58,29 @@ void handle_client(int client_fd) {
                 send(client_fd, reply, strlen(reply), 0);
             }
             else if (strcmp(buffer, "\\-") == 0) {
-                send(client_fd, "Bye\n", 4, 0);
                 break;
+            }
+            else if (strcmp(buffer, "\\*")) {
+                int new_multiplicator = atoi(buffer + 2);
+                multiplicator_flag = 1;
+                increment_flag = 0;
+                multiplicator = new_multiplicator;
+                send(client_fd, "Ok\n",3, 0);
             }
             else {
                 send(client_fd, "Неизвестная команда\n", 21, 0);
             }
         }
-        else {
+        else if (increment_flag){
             int num = atoi(buffer);
             num += increment;
+            char reply[BUFFER_SIZE];
+            snprintf(reply, sizeof(reply), "%d\n", num);
+            send(client_fd, reply, strlen(reply), 0);
+        } 
+        else if (multiplicator_flag) {
+            int num = atoi(buffer);
+            num *= multiplicator;
             char reply[BUFFER_SIZE];
             snprintf(reply, sizeof(reply), "%d\n", num);
             send(client_fd, reply, strlen(reply), 0);
@@ -125,7 +139,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    printf("Сервер запущен на порту %d.", port);
+    printf("Сервер запущен на порту %d.\n", port);
 
     while (1) {
         client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
