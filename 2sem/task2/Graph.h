@@ -464,6 +464,137 @@ public:
     
     int getVertexCount() const { return vertexCount; }
     int getEdgeCount() const { return edgeCount; }
+
+    int LoopCount() const {
+        if (vertexCount == 0) return 0;
+        
+        int* verts = new int[vertexCount];
+        int vCount = 0;
+        Vertex* v = vertices;
+        while (v) {
+            verts[vCount++] = v->id;
+            v = v->next;
+        }
+        
+        auto findIndex = [&](int id) -> int {
+            for (int i = 0; i < vCount; i++) {
+                if (verts[i] == id) return i;
+            }
+            return -1;
+        };
+        
+        bool* globalVisited = new bool[vCount];
+        for (int i = 0; i < vCount; i++) globalVisited[i] = false;
+        
+        int cycleCount = 0;
+        
+        for (int i = 0; i < vCount; i++) {
+            if (!globalVisited[i]) {
+                bool* reachableFrom = new bool[vCount];
+                for (int j = 0; j < vCount; j++) reachableFrom[j] = false;
+                
+                int* stack = new int[vCount];
+                int top = 0;
+                stack[top++] = i;
+                reachableFrom[i] = true;
+                
+                while (top > 0) {
+                    int currentIdx = stack[--top];
+                    int currentId = verts[currentIdx];
+                    
+                    Edge* e = edges;
+                    while (e) {
+                        if (e->from == currentId) {
+                            int nextIdx = findIndex(e->to);
+                            if (nextIdx >= 0 && !reachableFrom[nextIdx]) {
+                                reachableFrom[nextIdx] = true;
+                                if (top < vCount) {
+                                    stack[top++] = nextIdx;
+                                }
+                            }
+                        }
+                        e = e->next;
+                    }
+                }
+                
+                bool* canReachTo = new bool[vCount];
+                for (int j = 0; j < vCount; j++) canReachTo[j] = false;
+                
+                top = 0;
+                stack[top++] = i;
+                canReachTo[i] = true;
+                
+                while (top > 0) {
+                    int currentIdx = stack[--top];
+                    int currentId = verts[currentIdx];
+                    
+                    Edge* e = edges;
+                    while (e) {
+                        if (e->to == currentId) {
+                            int prevIdx = findIndex(e->from);
+                            if (prevIdx >= 0 && !canReachTo[prevIdx]) {
+                                canReachTo[prevIdx] = true;
+                                if (top < vCount) {
+                                    stack[top++] = prevIdx;
+                                }
+                            }
+                        }
+                        e = e->next;
+                    }
+                }
+                
+                bool* component = new bool[vCount];
+                int compSize = 0;
+                for (int j = 0; j < vCount; j++) {
+                    component[j] = reachableFrom[j] && canReachTo[j];
+                    if (component[j]) {
+                        compSize++;
+                        globalVisited[j] = true;
+                    }
+                }
+                
+                bool hasEdge = false;
+                Edge* e = edges;am
+                while (e) {
+                    int fromIdx = findIndex(e->from);
+                    int toIdx = findIndex(e->to);
+                    if (fromIdx >= 0 && toIdx >= 0 && component[fromIdx] && component[toIdx]) {
+                        hasEdge = true;
+                        break;
+                    }
+                    e = e->next;
+                }
+                
+                if (hasEdge && compSize > 1) {
+                    cycleCount++;
+                } else if (hasEdge && compSize == 1) {
+                    for (int j = 0; j < vCount; j++) {
+                        if (component[j]) {
+                            Edge* e2 = edges;
+                            while (e2) {
+                                if (e2->from == verts[j] && e2->to == verts[j]) {
+                                    cycleCount++;
+                                    break;
+                                }
+                                e2 = e2->next;
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                delete[] reachableFrom;
+                delete[] canReachTo;
+                delete[] component;
+                delete[] stack;
+            }
+        }
+        
+        delete[] verts;
+        delete[] globalVisited;
+        
+        return cycleCount;
+    }
     
     friend std::ostream& operator<<(std::ostream& os, const Graph& g) {
         os << "(";

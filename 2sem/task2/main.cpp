@@ -96,14 +96,45 @@ void runTests() {
         g15.remove(2, "2", "(1,'a',2)");
         std::cout << "После remove(2, ...): " << g15 << std::endl;
         
-        std::cout << "\nТест 20: Обработка ошибок" << std::endl;
+        std::cout << "\nТест 20: Использование LoopCount" << std::endl;
         try {
             Graph g16;
             g16.addVertex(-1);
         } catch (const Graph::Error& e) {
             e.print();
         }
-        
+
+        Graph g20;
+        g20.addVertex(1);
+        g20.addVertex(2);
+        g20.addVertex(3);
+        g20.addVertex(4);
+        g20.addVertex(5);
+        g20.addVertex(6);
+        g20.addEdge(1, 2, "a");
+        g20.addEdge(2, 3, "b");
+        g20.addEdge(3, 1, "c");
+        g20.addEdge(4, 5, "d");
+        g20.addEdge(5, 6, "e");
+        g20.addEdge(6, 4, "f");
+        std::cout << "Граф: " << g20 << std::endl;
+        std::cout << "Количество циклов: " << g20.LoopCount() << std::endl;
+
+
+        std::cout << "\nTecnt 21: Использование LoopCount" << std::endl;
+        Graph g21;
+        g21.addVertex(1);
+        g21.addVertex(2);
+        g21.addVertex(3);
+        g21.addVertex(4);
+        g21.addEdge(1, 2, "a");
+        g21.addEdge(2, 3, "b");
+        g21.addEdge(3, 1, "c");
+        g21.addEdge(4, 4, "self");
+        std::cout << "Граф: " << g21 << std::endl;
+        std::cout << "Количество циклов: " << g21.LoopCount() << std::endl;
+
+
         std::cout << "\nВсе тесты завершены" << std::endl;
         
     } catch (const Graph::Error& e) {
@@ -117,8 +148,6 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     
-    std::cout << "Ориентированный граф - АТД" << std::endl;
-    std::cout << "==========================" << std::endl;
     
     Graph graph;
     std::string cmd;
@@ -136,6 +165,7 @@ int main(int argc, char* argv[]) {
     std::cout << "  contains <вершина>           - проверить наличие вершины" << std::endl;
     std::cout << "  union                        - объединить с тестовым графом" << std::endl;
     std::cout << "  quit                         - выход" << std::endl;
+    std::cout << "  loopcount                    - подсчитать количество циклов" << std::endl;
     
     while (true) {
         std::cout << "\n> ";
@@ -272,6 +302,9 @@ int main(int argc, char* argv[]) {
             Graph result = graph + testGraph;
             std::cout << "Результат объединения: " << result << std::endl;
             std::cout << "Примечание: исходный граф не изменился" << std::endl;
+        }
+        else if (cmd == "loopcount") {
+            std::cout << "Колличество циклов: " << graph.LoopCount() << std::endl;
         }
         else {
             std::cout << "Неизвестная команда. Используйте: addV, addE, addM, removeV, removeE, removeM, "
